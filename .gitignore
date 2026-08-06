@@ -16,5 +16,16 @@ venv/
 # Dataset
 data/
 
+# Model artifacts
+artifacts/*
+!artifacts/.gitkeep
+
 # Temporary files
 tempFiles/
+
+# Windows
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
