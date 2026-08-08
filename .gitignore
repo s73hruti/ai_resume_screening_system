@@ -19,6 +19,9 @@ data/
 # Model artifacts
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/tfidf_vectorizer.joblib
+!artifacts/job_tfidf_matrix.joblib
+!artifacts/job_data.pkl
 
 # Temporary files
 tempFiles/
