@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+*.ipynb data/raw/
+data/processed/
+.git/
+.gitignore
+.DS_Store
+*.log
+.pytest_cache/
+.vscode/
+.idea/
