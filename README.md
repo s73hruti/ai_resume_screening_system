@@ -33,6 +33,26 @@ The final prediction pipeline is exposed through a FastAPI endpoint and deployed
 
 ---
 
+## Performance & Scale
+
+The system was benchmarked using the deployed prediction pipeline and API:
+
+| Metric | Result |
+|---|---:|
+| Resume dataset | 54,933 resumes |
+| Job postings | 2,277 |
+| Local ML inference (average) | 1.91 ms |
+| Local ML inference (P95) | 2.09 ms |
+| Deployed API latency (median) | 310.07 ms |
+| Deployed API latency (P95) | 819.55 ms |
+| Benchmark requests | 100 |
+
+The local inference benchmark measures the complete `predict_jobs()` pipeline, including resume preprocessing, TF-IDF transformation, cosine similarity calculation, and unique job recommendation generation.
+
+The deployed API benchmark measures end-to-end response latency for `POST /predict`, including network and server overhead.
+
+---
+
 ## Architecture
 
 ```text
