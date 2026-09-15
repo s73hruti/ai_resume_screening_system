@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install ruff httpx
+          pip install ruff==0.12.0 httpx
 
       - name: Download NLTK resources
         run: python -m nltk.downloader stopwords wordnet
