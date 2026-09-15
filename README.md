@@ -4,6 +4,8 @@ An end-to-end Machine Learning application that analyzes a resume and recommends
 
 The trained prediction pipeline is exposed through a **FastAPI REST API**, containerized using **Docker**, and deployed on **Render**.
 
+![CI](https://github.com/s73hruti/ai_resume_screening_system/actions/workflows/ci.yml/badge.svg)
+
 ## Live Demo
 
 **Live API:**

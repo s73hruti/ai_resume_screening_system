@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff httpx
+
+      - name: Download NLTK resources
+        run: python -m nltk.downloader stopwords wordnet
+
+      - name: Lint
+        run: ruff check src
+
+      - name: Smoke test the /predict endpoint
+        run: |
+          python - <<'EOF'
+          from fastapi.testclient import TestClient
+          from src.app.main import app
+
+          client = TestClient(app)
+          response = client.post("/predict", json={
+              "resume": "Experienced Python Developer with Django, Flask, SQL, AWS and REST APIs.",
+              "top_n": 3,
+          })
+          assert response.status_code == 200, response.text
+          data = response.json()
+          assert "recommendations" in data
+          assert len(data["recommendations"]) > 0
+          print("Smoke test passed:", data["recommendations"][0]["job_title"])
+          EOF
