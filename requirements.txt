@@ -6,3 +6,4 @@ scikit-learn==1.7.2
 joblib
 pydantic
 nltk
+sentence-transformers
