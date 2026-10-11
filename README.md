@@ -427,3 +427,44 @@ Production-style REST API
 ```
 
 This project was built to demonstrate practical **Machine Learning, NLP, API development, Docker, and deployment skills**.
+
+---
+
+## V2 Development Progress — Day 3
+
+**Status:** Threshold investigation completed provisionally; further validation required before production use.
+
+### Requirement-Level Semantic Matching
+
+V2 introduces semantic matching using Sentence Transformers, matching individual job requirements against resume chunks and identifying supporting evidence, strengths, and potential skill gaps.
+
+The scoring formula is:
+
+`final_score = 0.6 * average_similarity + 0.4 * requirement_coverage`
+
+### Classification Threshold Investigation
+
+The existing evaluation results contain 30 labeled resume–job pairs: 21 matches and 9 non-matches. The following thresholds were compared using the saved evaluation results.
+
+| Threshold | Accuracy | Precision | Recall | F1 |
+|---:|---:|---:|---:|---:|
+| 0.15 | 70.0% | 71.4% | 95.2% | 0.816 |
+| 0.20 | 80.0% | 85.7% | 85.7% | 0.857 |
+| 0.22 | 76.7% | 85.0% | 81.0% | 0.829 |
+| 0.25 | 66.7% | 92.3% | 57.1% | 0.706 |
+| 0.30 | 53.3% | 100.0% | 33.3% | 0.500 |
+| 0.50 | 30.0% | 0.0% | 0.0% | 0.000 |
+
+**Provisional decision:** Use 0.20 as the candidate threshold for further evaluation. It performed best among the tested thresholds on accuracy and F1. At 0.50, all 30 pairs were classified as non-matches.
+
+These results are preliminary because the evaluation set is small and was also used to compare thresholds. Additional independently labeled examples are required before selecting a production threshold.
+
+### Checkpoint and Next Steps
+
+- Git commit: `d8594d9` — Build V2 requirement-level semantic matching.
+- Branch: `v2-semantic-screening`.
+- Evaluation results: `data/evaluation/v2_semantic_threshold_results.csv`.
+- No new model evaluations or tests were run for this documentation update.
+- V2 has not been integrated into the existing V1 API.
+- Next: review the evaluation labels, gather additional labeled examples as needed, and validate the provisional threshold before integration.
+
