@@ -1,7 +1,103 @@
 # This module contains the logic for matching each JD requirement
 # against resume chunks and identifying the strongest semantic match.
-
+import re
 from sklearn.metrics.pairwise import cosine_similarity
+
+def verify_experience_requirement(
+    requirement: str,
+    resume: str,
+) -> dict:
+    """
+    Check whether explicit resume text supports a numeric
+    years-of-experience requirement.
+
+    This is a conservative text check, not a complete employment
+    history calculator or proof of a candidate's actual experience.
+    """
+
+    requirement_text = requirement.lower()
+    resume_text = resume.lower()
+
+    # Find numeric experience ranges, such as 5 years or 7-10 years.
+    range_pattern = (
+        r"(?<!\d)(\d{1,2})\s*"
+        r"(?:(?:-|–|to)\s*(\d{1,2})\s*)?"
+        r"(?:\+?\s*)?(?:years?|yrs?)\b"
+    )
+
+    requirement_ranges = list(re.finditer(
+        range_pattern,
+        requirement_text,
+        flags=re.IGNORECASE,
+    ))
+
+    # No numeric experience requirement to verify.
+    if not requirement_ranges:
+        return {
+            "status": "not_applicable",
+            "required_years": None,
+            "reported_years": None,
+        }
+
+    # More than one distinct numeric range may indicate conflicting
+    # qualification statements. Do not silently choose one.
+    ranges = {
+        (
+            int(match.group(1)),
+            int(match.group(2)) if match.group(2) else None,
+        )
+        for match in requirement_ranges
+    }
+
+    if len(ranges) > 1:
+        return {
+            "status": "ambiguous",
+            "required_years": None,
+            "reported_years": None,
+        }
+
+    minimum_years, maximum_years = next(iter(ranges))
+
+    # For a range such as 5-7 years, use the lower bound as the
+    # minimum requirement. For "5+ years", use 5.
+    required_years = minimum_years
+
+    # Look for an explicit duration near experience-related wording.
+    resume_patterns = [
+        r"(\d{1,2})\s*\+?\s*years?\s+"
+        r"(?:of\s+)?(?:professional\s+)?experience",
+        r"experience\s+(?:of\s+)?(\d{1,2})\s*\+?\s*years?",
+        r"(\d{1,2})\s*\+?\s*years?\s+"
+        r"(?:in|as)\s+(?:the\s+)?"
+        r"(?:software|database|network|data|development|testing)",
+    ]
+
+    reported_years = []
+
+    for pattern in resume_patterns:
+        for match in re.finditer(pattern, resume_text):
+            reported_years.append(int(match.group(1)))
+
+    if not reported_years:
+        return {
+            "status": "not_verified",
+            "required_years": required_years,
+            "reported_years": None,
+        }
+
+    # Use the largest explicitly stated duration as evidence.
+    # This does not calculate total career duration from job dates.
+    highest_reported = max(reported_years)
+
+    return {
+        "status": (
+            "verified"
+            if highest_reported >= required_years
+            else "not_verified"
+        ),
+        "required_years": required_years,
+        "reported_years": highest_reported,
+    }
 
 def find_best_resume_chunk(
     model,
@@ -131,45 +227,39 @@ def calculate_requirement_coverage(
     # Return coverage as a proportion, not a percentage.
     return matched_count / len(matching_results)
 
+
 def calculate_v2_score(
     matching_results: list[dict]
 ) -> dict:
-    """
-    Calculate the V2 resume-to-job ranking score.
+    """Calculate the V2 resume-to-job ranking score."""
 
-    Combines average requirement similarity (60%)
-    with requirement coverage (40%).
-    """
-
-    # Handle cases where no requirements were extracted.
     if not matching_results:
         return {
             "average_similarity": 0.0,
             "requirement_coverage": 0.0,
-            "final_score": 0.0
+            "final_score": 0.0,
         }
 
-    # Average the best similarity score for each requirement.
-    average_similarity = sum(
-        result["score"] for result in matching_results
-    ) / len(matching_results)
+    scores = [
+        float(result["score"])
+        for result in matching_results
+    ]
 
-    # Calculate the proportion of matched requirements.
-    coverage = calculate_requirement_coverage(
+    average_similarity = sum(scores) / len(scores)
+
+    requirement_coverage = calculate_requirement_coverage(
         matching_results
     )
 
-    # Combine both metrics using the planned weights.
     final_score = (
         0.6 * average_similarity
-        + 0.4 * coverage
+        + 0.4 * requirement_coverage
     )
 
-    # Return individual metrics for explainability.
     return {
         "average_similarity": round(average_similarity, 4),
-        "requirement_coverage": round(coverage, 4),
-        "final_score": round(final_score, 4)
+        "requirement_coverage": round(requirement_coverage, 4),
+        "final_score": round(final_score, 4),
     }
 
 def explain_requirement_matches(

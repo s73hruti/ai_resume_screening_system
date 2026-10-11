@@ -5,7 +5,9 @@ from .matching import (
     match_requirements_to_resume,
     calculate_v2_score,
     explain_requirement_matches,
+    verify_experience_requirement,
 )
+
 
 def analyze_resume_for_job(
     resume: str,
@@ -46,10 +48,36 @@ def analyze_resume_for_job(
     # Step 5: Explain matched requirements and potential gaps.
     explanations = explain_requirement_matches(matching_results)
 
-    # Step 6: Return the complete analysis.
+    # Step 6: Verify all experience requirements together.
+    # This helps detect conflicting numeric experience ranges.
+    experience_requirements = [
+        requirement
+        for requirement in requirements
+        if "experience" in requirement.lower()
+    ]
+
+    experience_verification = []
+
+    if experience_requirements:
+        combined_requirement = "; ".join(experience_requirements)
+
+        verification = verify_experience_requirement(
+            requirement=combined_requirement,
+            resume=resume,
+        )
+
+        experience_verification.append(
+            {
+                "requirements": experience_requirements,
+                **verification,
+            }
+        )
+
+    # Step 7: Return the complete analysis.
     return {
         "requirements": requirements,
         "requirement_matches": matching_results,
         **score_details,
         **explanations,
+        "experience_verification": experience_verification,
     }
