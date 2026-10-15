@@ -432,39 +432,58 @@ This project was built to demonstrate practical **Machine Learning, NLP, API dev
 
 ## V2 Development Progress — Day 3
 
-**Status:** Threshold investigation completed provisionally; further validation required before production use.
+**Status:** Requirement-level semantic matching implemented; evaluation completed provisionally. Further improvements and validation are required before production use.
 
 ### Requirement-Level Semantic Matching
 
-V2 introduces semantic matching using Sentence Transformers, matching individual job requirements against resume chunks and identifying supporting evidence, strengths, and potential skill gaps.
+V2 uses Sentence Transformers to compare individual job requirements against resume chunks and identify supporting evidence, strengths, and potential skill gaps.
 
 The scoring formula is:
 
 `final_score = 0.6 * average_similarity + 0.4 * requirement_coverage`
 
-### Classification Threshold Investigation
+The requirement-matching threshold is `0.50`. The classification threshold currently used by the evaluation script is `0.25`.
 
-The existing evaluation results contain 30 labeled resume–job pairs: 21 matches and 9 non-matches. The following thresholds were compared using the saved evaluation results.
+### Current Evaluation Results
 
-| Threshold | Accuracy | Precision | Recall | F1 |
+The evaluation uses 30 labeled resume–job description pairs: 10 matches and 20 non-matches.
+
+| Metric | Result at classification threshold 0.25 |
+|---|---:|
+| Accuracy | 66.67% |
+| Precision | 50.00% |
+| Recall | 20.00% |
+| F1 score | 0.2857 |
+| ROC-AUC | 0.7400 |
+| Average precision | 0.6297 |
+
+Confusion matrix: 18 true negatives, 2 false positives, 8 false negatives, and 2 true positives.
+
+### Threshold Decision and Limitations
+
+Threshold `0.25` is the current experimental setting, not a validated production threshold. In this evaluation, it identifies 2 of 10 labeled matches and incorrectly classifies 2 non-matches as matches.
+
+Threshold comparisons on this small dataset show the precision–recall trade-off:
+
+| Threshold | Accuracy | Precision | Recall | F1 score |
 |---:|---:|---:|---:|---:|
-| 0.15 | 70.0% | 71.4% | 95.2% | 0.816 |
-| 0.20 | 80.0% | 85.7% | 85.7% | 0.857 |
-| 0.22 | 76.7% | 85.0% | 81.0% | 0.829 |
-| 0.25 | 66.7% | 92.3% | 57.1% | 0.706 |
-| 0.30 | 53.3% | 100.0% | 33.3% | 0.500 |
-| 0.50 | 30.0% | 0.0% | 0.0% | 0.000 |
+| 0.20 | 76.67% | 71.43% | 50.00% | 0.5882 |
+| 0.25 | 66.67% | 50.00% | 20.00% | 0.2857 |
+| 0.30 | 70.00% | 66.67% | 20.00% | 0.3077 |
+| 0.35 | 70.00% | 100.00% | 10.00% | 0.1818 |
 
-**Provisional decision:** Use 0.20 as the candidate threshold for further evaluation. It performed best among the tested thresholds on accuracy and F1. At 0.50, all 30 pairs were classified as non-matches.
+These results are based on only 30 examples and should not be interpreted as expected performance on unseen resumes. A larger, independently labeled dataset is needed for reliable threshold selection.
 
-These results are preliminary because the evaluation set is small and was also used to compare thresholds. Additional independently labeled examples are required before selecting a production threshold.
+### Skill Matching and Testing
 
-### Checkpoint and Next Steps
+Explicit skill-overlap and mandatory-skill extraction utilities are being developed and tested separately. Mandatory-skill extraction is currently diagnostic-only and does not affect the V2 scoring formula.
 
-- Git commit: `d8594d9` — Build V2 requirement-level semantic matching.
+The latest full test run passed: **57 tests**.
+
+### Project Scope and Next Steps
+
 - Branch: `v2-semantic-screening`.
-- Evaluation results: `data/evaluation/v2_semantic_threshold_results.csv`.
-- No new model evaluations or tests were run for this documentation update.
+- Evaluation output: `data/evaluation/v2_eval_results.csv`.
+- Candidate labels are kept separate from generated evaluation results.
 - V2 has not been integrated into the existing V1 API.
-- Next: review the evaluation labels, gather additional labeled examples as needed, and validate the provisional threshold before integration.
-
+- Next: improve requirement matching, investigate false negatives, and evaluate on a larger labeled dataset before considering production use.

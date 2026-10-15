@@ -23,7 +23,7 @@ INPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_candidates.csv"
 OUTPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_results.csv"
 
 REQUIREMENT_THRESHOLD = 0.50
-CLASSIFICATION_THRESHOLD = 0.20
+CLASSIFICATION_THRESHOLD = 0.25
 
 
 def main():
