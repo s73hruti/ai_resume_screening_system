@@ -487,3 +487,28 @@ The latest full test run passed: **57 tests**.
 - Candidate labels are kept separate from generated evaluation results.
 - V2 has not been integrated into the existing V1 API.
 - Next: improve requirement matching, investigate false negatives, and evaluate on a larger labeled dataset before considering production use.
+
+## V2 Evaluation Checkpoint — 15 October 2026
+
+The current V2 evaluation milestone is frozen. The scoring formula and
+thresholds remain unchanged while development proceeds.
+
+- Evaluation examples: 30
+- Classification threshold: 0.25
+- Requirement-match threshold: 0.50
+- Accuracy: 73.33%
+- Precision: 50.00%
+- Recall: 25.00%
+- F1 score: 0.3333
+- ROC-AUC: 0.7330
+- Average Precision: 0.5966
+- Confusion matrix: TN=20, FP=2, FN=6, TP=2
+
+Labels for evaluation rows 16 and 18 were revised to non-match based on
+insufficient evidence for essential role-specific requirements. Reviewer
+rationales are recorded in the evaluation CSV. The original CSV backup is
+retained locally.
+
+These metrics describe a small development evaluation set and do not
+establish production readiness. No further threshold tuning is part of this
+milestone. V2 remains separate from the V1 application.
