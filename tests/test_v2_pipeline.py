@@ -64,3 +64,96 @@ def test_no_requirements_does_not_crash():
     assert result["final_score"] == 0.0
     assert result["strengths"] == []
     assert result["potential_gaps"] == []
+
+from unittest.mock import patch
+from model.matching import match_requirements_to_resume
+
+
+def test_exact_skill_alone_does_not_override_semantic_threshold():
+    mocked_result = {
+        "requirement": "Angular",
+        "score": 0.3568,
+        "evidence": "Built applications using Angular",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Angular"],
+            resume_chunks=["Built applications using Angular"],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+    assert results[0]["score"] == 0.3568
+
+
+def test_partial_exact_skill_overlap_does_not_match_multi_skill_requirement():
+    mocked_result = {
+        "requirement": "Python and SQL",
+        "score": 0.20,
+        "evidence": "Python projects",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Python and SQL"],
+            resume_chunks=["Python projects only"],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+
+
+
+
+def test_explicit_required_skill_matches_when_present_in_evidence():
+    mocked_result = {
+        "requirement": "Required skill: php",
+        "score": 0.3093,
+        "evidence": "Experience building applications using PHP and MySQL",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Required skill: php"],
+            resume_chunks=["Experience building applications using PHP and MySQL"],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is True
+    assert results[0]["score"] == 0.3093
+
+
+def test_explicit_required_skill_does_not_match_without_evidence():
+    mocked_result = {
+        "requirement": "Required skill: php",
+        "score": 0.3093,
+        "evidence": "Experience with SQL and database administration",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Required skill: php"],
+            resume_chunks=["Experience with SQL and database administration"],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+
+

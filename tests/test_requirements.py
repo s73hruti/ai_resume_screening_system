@@ -408,6 +408,45 @@ def test_flattened_description_does_not_invent_experience_requirement():
         for item in requirements
     )
 
+def test_extracts_explicit_required_skill_after_job_metadata():
+    description = """
+    Job Title: Java Full Stack Developer
+    Experience: 1yrs to 3yrs
+    Key Skills:
+    Angular
+    Spring boot
+    Mysql
+    Job Types: Full-time, Walk-In
+    Salary: ₹376,484.00 - ₹1,457,529.00 per year
+    Schedule:
+    Day shift
+    Experience:
+    total work: 1 year (Preferred)
+    JSP: 1 year (Preferred)
+    java: 1 year (Required)
+    Education:
+    Bachelor's (Preferred)
+    """
+
+    requirements = extract_requirements(description)
+    combined = " ".join(requirements).lower()
+
+    assert any("java" in item.lower() for item in requirements)
+    assert "salary" not in combined
+    assert "day shift" not in combined
 
 
+def test_preferred_skills_are_not_extracted_as_requirements():
+    description = (
+        "Minimum of 2 - 6 years of programming experience required, "
+        "preferably with ASP.NET and SQL."
+    )
 
+    requirements = extract_requirements(description)
+    combined = " ".join(requirements).lower()
+
+    assert not any(
+        item.lower() in {"required skill: asp.net", "required skill: sql"}
+        for item in requirements
+    )
+    assert "2 - 6 years" in combined or "2-6 years" in combined

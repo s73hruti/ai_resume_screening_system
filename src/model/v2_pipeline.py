@@ -1,6 +1,6 @@
 from .requirements import extract_requirements
 from .chunks import split_resume_into_chunks
-
+from .skill_matching import check_must_have_skills
 from .matching import (
     match_requirements_to_resume,
     calculate_v2_score,
@@ -72,12 +72,18 @@ def analyze_resume_for_job(
                 **verification,
             }
         )
+    # Step 7: Verify explicitly mandatory skills.
+    mandatory_skill_check = check_must_have_skills(
+        resume=resume,
+        job_description=job_description,
+    )
 
-    # Step 7: Return the complete analysis.
+    # Step 8: Return the complete analysis.
     return {
         "requirements": requirements,
         "requirement_matches": matching_results,
         **score_details,
         **explanations,
         "experience_verification": experience_verification,
+        **mandatory_skill_check,
     }

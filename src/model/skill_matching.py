@@ -12,6 +12,11 @@ SKILL_ALIASES = {
     "network administrator": "network administration",
 }
 
+SKILL_ALIASES.update({
+    "reactjs": "react",
+    "mssql": "sql server",
+})
+
 SKILLS = sorted(
     TECHNICAL_SKILLS | set(SKILL_ALIASES),
     key=len,
@@ -83,31 +88,28 @@ def calculate_skill_overlap(
         "skill_overlap": round(overlap, 4),
     }
 
+
 def extract_must_have_skills(job_description: str) -> set[str]:
-    """Extract explicitly mandatory skills without promoting nearby skills."""
+    """Extract clearly mandatory skills without promoting preferred skills."""
     if not isinstance(job_description, str) or not job_description.strip():
         return set()
 
     normalized = re.sub(r"\s+", " ", job_description.lower())
-    must_have_skills = set()
+    mandatory = set()
 
-    before_patterns = [
+    optional_patterns = [
+        r"\bpreferably\b",
+        r"\bpreferred\b",
+        r"\bnice\s+to\s+have\b",
+        r"\bdesirable\b",
+        r"\boptional\b",
+    ]
+
+    mandatory_patterns = [
         r"\bmust[\s-]+have\b",
         r"\brequired\b",
         r"\bmandatory\b",
         r"\bessential\b",
-    ]
-
-    after_patterns = [
-        r"\bis\s+required\b",
-        r"\bare\s+required\b",
-        r"\bis\s+mandatory\b",
-        r"\bare\s+mandatory\b",
-        r"\bis\s+essential\b",
-        r"\bare\s+essential\b",
-    ]
-
-    core_requirement_patterns = [
         r"\bexcellent\s+knowledge\s+of\b",
         r"\bstrong\s+knowledge\s+of\b",
         r"\bgood\s+knowledge\s+of\b",
@@ -115,102 +117,129 @@ def extract_must_have_skills(job_description: str) -> set[str]:
         r"\bsound\s+knowledge\s+of\b",
     ]
 
-    optional_patterns = [
-        r"\bpreferred\b",
-        r"\bnice\s+to\s+have\b",
-        r"\bdesirable\b",
-        r"\boptional\b",
-    ]
-
-    # Split at sentence and contrasting-clause boundaries.
+    # Split sentences, but retain commas so a shared introductory phrase
+    # can apply to a list of technologies.
     sentences = re.split(r"(?<=[.!?;])\s+", normalized)
 
     for sentence in sentences:
-        clauses = re.split(
-            r"\b(?:while|whereas|but|however|although)\b|,",
-            sentence,
+        occurrences = []
+        for skill in SKILLS:
+            escaped = re.escape(skill.lower()).replace(r"\ ", r"\s+")
+            pattern = rf"(?<!\w){escaped}(?!\w)"
+
+            for match in re.finditer(pattern, sentence):
+                occurrences.append(
+                    (match.start(), match.end(), skill)
+                )
+
+        # Prefer longer names when skill names overlap.
+        occurrences.sort(
+            key=lambda item: (item[0], -(item[1] - item[0]))
         )
 
-        for clause in clauses:
-            # Find skill occurrences, preferring longer names at the same
-            # location (e.g. Node.js instead of both Node.js and Node).
-            occurrences = []
+        selected = []
+        for start, end, skill in occurrences:
+            if any(
+                start < selected_end and selected_start < end
+                for selected_start, selected_end, _ in selected
+            ):
+                continue
+            selected.append((start, end, skill))
 
-            for skill in SKILLS:
-                escaped = re.escape(skill.lower()).replace(r"\ ", r"\s+")
-                pattern = rf"(?<!\w){escaped}(?!\w)"
-
-                for match in re.finditer(pattern, clause):
-                    occurrences.append(
-                        (match.start(), match.end(), skill)
-                    )
-
-            occurrences.sort(
-                key=lambda item: (item[0], -(item[1] - item[0]))
+        for index, (start, end, skill) in enumerate(selected):
+            previous_end = selected[index - 1][1] if index else 0
+            next_start = (
+                selected[index + 1][0]
+                if index + 1 < len(selected)
+                else len(sentence)
             )
 
-            selected = []
-            for start, end, skill in occurrences:
-                if any(
-                    start < selected_end and selected_start < end
-                    for selected_start, selected_end, _ in selected
-                ):
-                    continue
-                selected.append((start, end, skill))
+            before = sentence[previous_end:start]
+            local_before = sentence[max(0, start - 100):start]
+            after = sentence[end:next_start]
 
-            # Evaluate each skill using only its local text, bounded by
-            # neighboring skill mentions in the same clause.
-            for index, (start, end, skill) in enumerate(selected):
-                previous_end = (
-                    selected[index - 1][1] if index > 0 else 0
+            # Ignore skills locally marked as optional.
+            if any(re.search(p, before) for p in optional_patterns):
+                continue
+            if any(re.search(p, after) for p in optional_patterns):
+                continue
+
+            explicit_mandatory = any(
+                re.search(p, before)
+                for p in [
+                    r"\bmust[\s-]+have\b",
+                    r"\brequired\b",
+                    r"\bmandatory\b",
+                    r"\bessential\b",
+                ]
+            ) or any(
+                re.search(
+                    p,
+                    after,
                 )
-                next_start = (
-                    selected[index + 1][0]
-                    if index + 1 < len(selected)
-                    else len(clause)
-                )
+                for p in [
+                    r"^\s*(?:is|are)\s+required\b",
+                    r"^\s*(?:is|are)\s+mandatory\b",
+                    r"^\s*(?:is|are)\s+essential\b",
+                ]
+            )
 
-                before = clause[:start]
-                after = clause[end:next_start]
+            # Carry mandatory wording forward to skills in the same list.
+            if index > 0:
+                earlier_text = sentence[:start]
 
-                if any(
-                    re.search(pattern, before)
-                    for pattern in optional_patterns
-                ):
-                    continue
-
-                if any(
-                    re.search(pattern, after)
-                    for pattern in optional_patterns
-                ):
-                    continue
-
-
-                is_mandatory = (
-                    any(
-                        re.search(pattern, before)
-                        for pattern in before_patterns
-                    )
-                    or any(
-                        re.search(pattern, after)
-                        for pattern in after_patterns
-                    )
-                    or any(
-                        re.search(pattern, clause[:start])
-                        for pattern in core_requirement_patterns
-                    )
+                last_optional = max(
+                    (
+                        match.start()
+                        for pattern in optional_patterns
+                        for match in re.finditer(pattern, earlier_text)
+                    ),
+                    default=-1,
                 )
 
+                last_mandatory = max(
+                    (
+                        match.start()
+                        for pattern in [
+                            r"\bmust[\s-]+have\b",
+                            r"\brequired\b",
+                            r"\bmandatory\b",
+                            r"\bessential\b",
+                        ]
+                        for match in re.finditer(pattern, earlier_text)
+                    ),
+                    default=-1,
+                )
 
-                if is_mandatory:
-                    must_have_skills.add(
-                        SKILL_ALIASES.get(skill, skill)
-                    )
+                if last_mandatory > last_optional:
+                    explicit_mandatory = True
+                    
+            core_knowledge = any(
+                re.search(p, local_before)
+                for p in [
+                    r"\bexcellent\s+knowledge\s+of\b",
+                    r"\bstrong\s+knowledge\s+of\b",
+                    r"\bgood\s+knowledge\s+of\b",
+                    r"\bsolid\s+knowledge\s+of\b",
+                    r"\bsound\s+knowledge\s+of\b",
+                ]
+            )
 
-    return must_have_skills
+            # A shared list introduction applies to the technologies
+            # following it, provided the sentence isn't optional.
+            list_requirement = bool(
+                re.search(
+                    r"\b(?:proficient|expert|experienced)\s+in"
+                    r"\s+(?:the\s+following\s+)?"
+                    r"(?:technologies|skills|tools)\s*:",
+                    sentence[:start],
+                )
+            )
 
+            if explicit_mandatory or core_knowledge or list_requirement:
+                mandatory.add(SKILL_ALIASES.get(skill, skill))
 
-
+    return mandatory
 
 def check_must_have_skills(
     resume: str,

@@ -196,3 +196,58 @@ def test_detects_all_skills_in_shared_mandatory_phrase():
     )
 
     assert result == {"python", "sql"}
+
+
+def test_detects_php_in_excellent_knowledge_phrase():
+    assert extract_must_have_skills(
+        "Excellent knowledge of object-oriented PHP."
+    ) == {"php"}
+
+
+def test_detects_mandatory_technology_list():
+    result = extract_must_have_skills(
+        "Proficient in the following technologies: "
+        "C#, .NET, HTML5, CSS3, MySQL, ReactJS."
+    )
+
+    assert {"c#", ".net", "html5", "css3", "mysql"}.issubset(result)
+
+
+def test_preferred_sentence_does_not_create_mandatory_skills():
+    assert extract_must_have_skills(
+        "PHP and MySQL are preferred technologies."
+    ) == set()
+
+
+def test_missing_mandatory_skill_blocks_eligibility():
+    from model.skill_matching import check_must_have_skills
+
+    result = check_must_have_skills(
+        resume="JavaScript and HTML development experience.",
+        job_description="Excellent knowledge of PHP is required.",
+    )
+
+    assert result["must_haves_satisfied"] is False
+    assert "php" in result["missing_must_have_skills"]
+
+
+def test_no_detected_mandatory_skills_does_not_block_eligibility():
+    from model.skill_matching import check_must_have_skills
+
+    result = check_must_have_skills(
+        resume="Python development experience.",
+        job_description="Python experience is preferred.",
+    )
+
+    assert result["must_have_skills"] == []
+    assert result["must_haves_satisfied"] is True
+
+
+def test_preferably_with_multiple_skills_does_not_make_them_mandatory():
+    result = extract_must_have_skills(
+        "2 - 6 years of programming experience required, "
+        "preferably with ASP.NET and SQL."
+    )
+
+    assert result == set()
+

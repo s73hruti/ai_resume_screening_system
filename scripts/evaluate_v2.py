@@ -23,7 +23,7 @@ INPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_candidates.csv"
 OUTPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_results.csv"
 
 REQUIREMENT_THRESHOLD = 0.50
-CLASSIFICATION_THRESHOLD = 0.25
+CLASSIFICATION_THRESHOLD = 0.20
 
 
 def main():
@@ -79,7 +79,10 @@ def main():
         )
 
         score = float(analysis["final_score"])
-        predicted_match = int(score >= CLASSIFICATION_THRESHOLD)
+        predicted_match = int(
+            score >= CLASSIFICATION_THRESHOLD
+            and analysis["must_haves_satisfied"]
+        )
 
 
         results.append(
@@ -100,6 +103,9 @@ def main():
                 "requirements_extracted": len(analysis["requirements"]),
                 "strengths_count": len(analysis["strengths"]),
                 "potential_gaps_count": len(analysis["potential_gaps"]),
+                "must_have_skills": ", ".join(analysis["must_have_skills"]),
+                "missing_must_have_skills": ", ".join(analysis["missing_must_have_skills"]),
+                "must_haves_satisfied": analysis["must_haves_satisfied"],
             }
         )
 

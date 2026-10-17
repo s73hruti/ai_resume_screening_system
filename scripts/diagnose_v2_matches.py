@@ -13,7 +13,7 @@ from model.skill_matching import calculate_skill_overlap
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_candidates.csv"
 
-TARGET_INDICES = [4, 10, 14, 25]
+TARGET_INDICES = [11, 27]
 REQUIREMENT_THRESHOLD = 0.50
 
 

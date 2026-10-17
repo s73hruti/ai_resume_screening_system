@@ -284,6 +284,26 @@ def _extract_inline_label(line: str) -> tuple[str, str] | None:
 
     return None
 
+def _extract_explicit_required_skill(line: str) -> str | None:
+    """Extract a technical skill explicitly marked required or mandatory."""
+    match = re.match(
+        r"^\s*(?P<skill>[^:]+?)\s*:\s*"
+        r"(?P<details>.*?)\s*\((?P<status>required|mandatory)\)\s*$",
+        line,
+        flags=re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    skill_label = match.group("skill").strip().lower()
+    known_skills = {skill.lower(): skill for skill in TECHNICAL_SKILLS}
+    skill = known_skills.get(skill_label)
+
+    if skill is None:
+        return None
+
+    return skill
 
 def _is_metadata(line: str) -> bool:
     """Identify administrative job-posting fields."""
@@ -310,6 +330,15 @@ def _extract_flattened_requirements(job_description: str) -> list[str]:
         )
 
     lower_text = text.lower()
+    # Exclude preferred clauses from skill extraction, but retain the
+    # full description for experience-range extraction.
+    skill_search_text = lower_text
+    preferred_match = re.search(
+        r"\bpreferably\s+(?:with|in|using)?\s*(.+)$",
+        lower_text,
+    )
+    if preferred_match:
+        skill_search_text = lower_text[:preferred_match.start()].strip()
 
     # Avoid extracting skills from arbitrary prose with no job-related context.
     has_requirement_context = bool(
@@ -331,11 +360,20 @@ def _extract_flattened_requirements(job_description: str) -> list[str]:
     for skill in sorted(TECHNICAL_SKILLS, key=lambda item: -len(item)):
         pattern = rf"(?<!\w){re.escape(skill.lower())}(?!\w)"
 
-        if re.search(pattern, lower_text):
+        if re.search(pattern, skill_search_text):
             found_skills.append(skill)
 
 
-    if found_skills:
+        has_experience_range = bool(
+        re.search(
+            r"\b\d{1,2}\s*(?:-|–|to)\s*\d{1,2}"
+            r"\s*(?:\+?\s*)?(?:years?|yrs?)\b",
+            lower_text,
+            flags=re.IGNORECASE,
+        )
+    )
+
+    if found_skills or has_experience_range:
         skill_requirements = [
             f"Required skill: {skill}"
             for skill in found_skills
@@ -446,6 +484,12 @@ def extract_requirements(job_description: str) -> list[str]:
 
     for line in lines:
         if not line:
+            continue
+
+        # Preserve explicitly mandatory technical skills even after metadata.
+        explicit_skill = _extract_explicit_required_skill(line)
+        if explicit_skill:
+            requirements.append(explicit_skill)
             continue
 
         # Stop collecting requirements when posting metadata begins.

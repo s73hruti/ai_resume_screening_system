@@ -195,7 +195,37 @@ def match_requirements_to_resume(
         # The threshold is currently configurable.
         # We will evaluate different threshold values later
         # instead of assuming that 0.50 is scientifically correct.
-        result["matched"] = score >= threshold
+        # Exact evidence may override semantic similarity only for an
+        # explicitly extracted, single-skill requirement such as
+        # "Required skill: php". Do not apply this to generic sentences.
+        import re
+
+        requirement_match = re.fullmatch(
+            r"\s*(?:required|mandatory)\s+skill\s*:\s*(.+?)\s*",
+            requirement,
+            flags=re.IGNORECASE,
+        )
+
+        exact_required_skill_match = False
+
+        if requirement_match:
+            from .skill_matching import extract_explicit_skills
+
+            required_skills = extract_explicit_skills(
+                requirement_match.group(1)
+            )
+            evidence_skills = extract_explicit_skills(
+                result.get("evidence", "")
+            )
+
+            exact_required_skill_match = (
+                len(required_skills) == 1
+                and required_skills.issubset(evidence_skills)
+            )
+
+        result["matched"] = (
+            float(score) >= threshold or exact_required_skill_match
+        )
 
         # Add the complete result to our final results list.
         results.append(result)
@@ -252,8 +282,8 @@ def calculate_v2_score(
     )
 
     final_score = (
-        0.6 * average_similarity
-        + 0.4 * requirement_coverage
+        0.5 * average_similarity
+        + 0.5 * requirement_coverage
     )
 
     return {
