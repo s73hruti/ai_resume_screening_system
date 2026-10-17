@@ -15,7 +15,10 @@ from sklearn.metrics import (
 )
 from model.skill_matching import calculate_skill_overlap
 from model.embeddings import load_embedding_model
-from model.v2_pipeline import analyze_resume_for_job
+from model.v2_pipeline import (
+    analyze_resume_for_job,
+    determine_decision_status,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +86,10 @@ def main():
             score >= CLASSIFICATION_THRESHOLD
             and analysis["must_haves_satisfied"]
         )
+        decision_status = determine_decision_status(
+            analysis,
+            classification_threshold=CLASSIFICATION_THRESHOLD,
+        )
 
 
         results.append(
@@ -91,6 +98,7 @@ def main():
                 "job_title": row.get("job_title", ""),
                 "expected_match": int(row["expected_match"]),
                 "predicted_match": predicted_match,
+                "decision_status": decision_status,
                 "final_score": score,
                 "average_similarity": analysis["average_similarity"],
                 "requirement_coverage": analysis["requirement_coverage"],
@@ -114,11 +122,19 @@ def main():
             f"[{row_number}/{len(df)}] "
             f"score={score:.4f}, "
             f"expected={int(row['expected_match'])}, "
-            f"predicted={predicted_match}"
+            f"predicted={predicted_match}, "
+            f"status={decision_status}"
         )
 
     results_df = pd.DataFrame(results)
     results_df.to_csv(OUTPUT_PATH, index=False)
+    print("\n=== Decision Status Summary ===")
+    print(
+        results_df["decision_status"]
+        .value_counts()
+        .reindex(["match", "no_match", "review"], fill_value=0)
+        .to_string()
+    )
 
     y_true = results_df["expected_match"]
     y_pred = results_df["predicted_match"]

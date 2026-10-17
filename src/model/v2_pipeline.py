@@ -8,6 +8,28 @@ from .matching import (
     verify_experience_requirement,
 )
 
+def determine_decision_status(
+    analysis: dict,
+    classification_threshold: float = 0.20,
+) -> str:
+    """Classify the analysis as match, no_match, or review."""
+
+    # Mandatory-skill failures remain a hard rejection.
+    if not analysis["must_haves_satisfied"]:
+        return "no_match"
+
+    # A score below the existing classification threshold is a no-match.
+    if analysis["final_score"] < classification_threshold:
+        return "no_match"
+
+    # A sufficiently high score without any matched requirements
+    # is uncertain, so send it for review.
+    if analysis["requirement_coverage"] == 0:
+        return "review"
+
+    # The score is sufficient, mandatory skills pass, and at least
+    # one requirement is matched.
+    return "match"
 
 def analyze_resume_for_job(
     resume: str,
@@ -78,8 +100,9 @@ def analyze_resume_for_job(
         job_description=job_description,
     )
 
-    # Step 8: Return the complete analysis.
-    return {
+
+    # Step 8: Return the complete analysis and decision status.
+    analysis = {
         "requirements": requirements,
         "requirement_matches": matching_results,
         **score_details,
@@ -87,3 +110,7 @@ def analyze_resume_for_job(
         "experience_verification": experience_verification,
         **mandatory_skill_check,
     }
+
+    analysis["decision_status"] = determine_decision_status(analysis)
+
+    return analysis

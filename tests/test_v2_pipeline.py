@@ -1,5 +1,6 @@
 
 from model.v2_pipeline import analyze_resume_for_job
+from model.v2_pipeline import determine_decision_status
 
 
 class FakeEmbeddingModel:
@@ -66,7 +67,10 @@ def test_no_requirements_does_not_crash():
     assert result["potential_gaps"] == []
 
 from unittest.mock import patch
-from model.matching import match_requirements_to_resume
+from model.matching import (
+    calculate_v2_score,
+    match_requirements_to_resume,
+)
 
 
 def test_exact_skill_alone_does_not_override_semantic_threshold():
@@ -156,4 +160,78 @@ def test_explicit_required_skill_does_not_match_without_evidence():
 
     assert results[0]["matched"] is False
 
+
+def test_calculate_v2_score_returns_zeros_for_empty_results():
+    result = calculate_v2_score([])
+
+    assert result == {
+        "average_similarity": 0.0,
+        "requirement_coverage": 0.0,
+        "final_score": 0.0,
+    }
+
+
+def test_calculate_v2_score_with_zero_coverage():
+    results = [
+        {"score": 0.4437, "matched": False},
+    ]
+
+    result = calculate_v2_score(results)
+
+    assert result["average_similarity"] == 0.4437
+    assert result["requirement_coverage"] == 0.0
+    assert result["final_score"] == 0.2218
+
+
+def test_calculate_v2_score_rewards_matched_requirements():
+    results = [
+        {"score": 0.8, "matched": True},
+        {"score": 0.6, "matched": False},
+    ]
+
+    result = calculate_v2_score(results)
+
+    assert result["average_similarity"] == 0.7
+    assert result["requirement_coverage"] == 0.5
+    assert result["final_score"] == 0.6
+
+
+def test_decision_status_returns_no_match_when_mandatory_skills_fail():
+    analysis = {
+        "must_haves_satisfied": False,
+        "final_score": 0.80,
+        "requirement_coverage": 1.0,
+    }
+
+    assert determine_decision_status(analysis) == "no_match"
+
+
+def test_decision_status_returns_no_match_below_threshold():
+    analysis = {
+        "must_haves_satisfied": True,
+        "final_score": 0.19,
+        "requirement_coverage": 0.5,
+    }
+
+    assert determine_decision_status(analysis) == "no_match"
+
+
+def test_decision_status_returns_review_when_no_requirements_match():
+    analysis = {
+        "must_haves_satisfied": True,
+        "final_score": 0.2218,
+        "requirement_coverage": 0.0,
+    }
+
+    assert determine_decision_status(analysis) == "review"
+
+
+def test_decision_status_returns_match_when_requirements_match():
+    analysis = {
+        "must_haves_satisfied": True,
+        "final_score": 0.60,
+        "requirement_coverage": 0.5,
+    }
+
+    assert determine_decision_status(analysis) == "match"
 
