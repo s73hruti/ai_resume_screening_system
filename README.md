@@ -427,3 +427,118 @@ Production-style REST API
 ```
 
 This project was built to demonstrate practical **Machine Learning, NLP, API development, Docker, and deployment skills**.
+
+---
+
+## V2 Development Progress
+
+**Status:** Requirement-level semantic matching, explicit skill matching, mandatory-skill gating, and experience-requirement verification are implemented and under evaluation. V2 remains experimental and is not production-validated.
+
+### Requirement-Level Semantic Matching
+
+V2 uses Sentence Transformers to compare individual job requirements against resume chunks and identify supporting evidence, strengths, and potential skill gaps.
+
+The scoring formula is:
+
+`final_score = 0.6 * average_similarity + 0.4 * requirement_coverage`
+
+The requirement-matching threshold is `0.50`. The evaluation classification threshold is `0.20`.
+
+The binary prediction is derived from the decision status:
+- `match` maps to `1` (predicted match).
+- `no_match` maps to `0` (predicted non-match).
+- `review` maps to `0` (not counted as an automatic positive prediction).
+
+The decision status is determined using the existing scoring threshold and mandatory-requirement checks. A `review` result remains available for human review even though its binary evaluation prediction is `0`.
+
+### Current Evaluation Results
+
+The latest evaluation ran against 29 labeled resume–job description pairs: 7 matches and 22 non-matches.
+
+| Metric | Result at classification threshold 0.20 |
+|---|---:|
+| Accuracy | 93.10% |
+| Precision | 85.71% |
+| Recall | 85.71% |
+| F1 score | 0.8571 |
+| ROC-AUC | 0.8506 |
+| Average precision | 0.7577 |
+
+Confusion matrix: 21 true negatives, 1 false positive, 1 false negative, and 6 true positives.
+
+Decision-status summary: 5 match, 22 no-match, and 2 review.
+
+### Evaluation Limitations
+
+These metrics describe a small development evaluation set and should not be interpreted as expected performance on unseen resumes. The classification threshold is experimental, not production-validated. A larger, independently labeled dataset is needed for reliable assessment and threshold selection.
+
+### Skill Matching, Experience Verification, and Testing
+
+V2 includes explicit technical-skill matching and mandatory-skill checks. Mandatory-skill satisfaction acts as a gate in binary evaluation predictions; it does not alter the scoring formula above.
+
+Experience-requirement verification distinguishes verified, unverified, ambiguous, and non-applicable cases. Its influence on final decision-making requires further review and testing.
+
+The latest targeted verification run passed **21 tests** across `tests/test_experience_verification.py` and `tests/test_v2_pipeline.py`. The full test suite passed after the binary prediction rule was updated.
+
+### Project Scope and Next Steps
+
+- Branch: `v2-semantic-screening`.
+- Candidate dataset: `data/evaluation/v2_eval_candidates.csv`.
+- Generated evaluation results: `data/evaluation/v2_eval_results.csv`.
+- Previous evaluation backup: `data/evaluation/v2_eval_results_pre_day6.csv`.
+- Candidate labels remain separate from generated evaluation results.
+- V2 has not been integrated into the existing V1 API.
+- Next: review the two errors, validate experience-verification behavior in decision-making, run the full test suite, and assess a larger labeled dataset before considering production use.
+
+## Earlier V2 Evaluation Checkpoint
+
+The current V2 evaluation milestone is frozen. The scoring formula and
+thresholds remain unchanged while development proceeds.
+
+- Evaluation examples: 30
+- Classification threshold: 0.25
+- Requirement-match threshold: 0.50
+- Accuracy: 93.10%
+- Precision: 100.00%
+- Recall: 71.43%
+- F1 score: 0.8333
+- ROC-AUC: 0.8506
+- Average Precision: 0.7577
+- Confusion matrix: TN=22, FP=0, FN=2, TP=5
+
+Labels for evaluation rows 16 and 18 were revised to non-match based on
+insufficient evidence for essential role-specific requirements. Reviewer
+rationales are recorded in the evaluation CSV. The original CSV backup is
+retained locally.
+
+These metrics describe a small development evaluation set and do not
+establish production readiness. No further threshold tuning is part of this
+milestone. V2 remains separate from the V1 application.
+
+### POST `/predict-v2`
+
+Analyzes a resume against a specific job description using the V2 semantic matching pipeline. Unlike V1, which recommends jobs from the existing dataset, V2 evaluates one resume against one supplied job description.
+
+**Example Request**
+
+```json
+{
+  "resume": "Python developer with 3 years of experience building REST APIs, SQL databases, and FastAPI services.",
+  "job_description": "Looking for a Python developer with experience in Python, REST APIs, SQL, and FastAPI."
+}
+```
+
+**Response**
+
+The endpoint returns the V2 analysis, including the final score, decision status, extracted requirements, requirement-level matches, strengths, and potential gaps.
+
+**Validation**
+- `resume` is required and must contain at least 10 characters.
+- `job_description` is required and must contain at least 10 characters.
+- Invalid requests return HTTP `422`.
+
+**Try it locally**
+
+Start the API, then open `http://localhost:8000/docs` and select `POST /predict-v2` to submit a request.
+
+V2 loads its sentence-embedding model on the first V2 request and reuses it for subsequent requests.
