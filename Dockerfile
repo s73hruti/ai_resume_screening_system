@@ -8,7 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies.
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=600 --retries=10 torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --default-timeout=600 --retries=10 -r requirements.txt
 
 # Download the NLTK resources required by the prediction pipeline.
 RUN python -m nltk.downloader stopwords wordnet
