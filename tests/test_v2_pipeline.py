@@ -1,5 +1,5 @@
 
-from model.v2_pipeline import analyze_resume_for_job
+from model.v2_pipeline import analyze_resume_for_job, decision_status_to_prediction
 from model.v2_pipeline import determine_decision_status
 
 
@@ -234,4 +234,15 @@ def test_decision_status_returns_match_when_requirements_match():
     }
 
     assert determine_decision_status(analysis) == "match"
+
+def test_review_status_is_not_counted_as_positive_prediction():
+    assert decision_status_to_prediction("review") == 0
+
+
+def test_match_status_is_counted_as_positive_prediction():
+    assert decision_status_to_prediction("match") == 1
+
+
+def test_no_match_status_is_counted_as_negative_prediction():
+    assert decision_status_to_prediction("no_match") == 0
 

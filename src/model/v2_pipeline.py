@@ -31,6 +31,10 @@ def determine_decision_status(
     # one requirement is matched.
     return "match"
 
+def decision_status_to_prediction(decision_status: str) -> int:
+    """Convert a three-way decision into a binary evaluation prediction."""
+    return int(decision_status == "match")
+
 def analyze_resume_for_job(
     resume: str,
     job_description: str,

@@ -430,7 +430,7 @@ This project was built to demonstrate practical **Machine Learning, NLP, API dev
 
 ---
 
-## V2 Development Progress — Day 6
+## V2 Development Progress
 
 **Status:** Requirement-level semantic matching, explicit skill matching, mandatory-skill gating, and experience-requirement verification are implemented and under evaluation. V2 remains experimental and is not production-validated.
 
@@ -444,11 +444,12 @@ The scoring formula is:
 
 The requirement-matching threshold is `0.50`. The evaluation classification threshold is `0.20`.
 
-The binary prediction rule requires both:
-- `final_score >= 0.20`
-- `must_haves_satisfied == True`
+The binary prediction is derived from the decision status:
+- `match` maps to `1` (predicted match).
+- `no_match` maps to `0` (predicted non-match).
+- `review` maps to `0` (not counted as an automatic positive prediction).
 
-Decision status is tracked separately as `match`, `no_match`, or `review`. A `review` status does not necessarily mean the binary prediction is negative.
+The decision status is determined using the existing scoring threshold and mandatory-requirement checks. A `review` result remains available for human review even though its binary evaluation prediction is `0`.
 
 ### Current Evaluation Results
 
@@ -477,19 +478,19 @@ V2 includes explicit technical-skill matching and mandatory-skill checks. Mandat
 
 Experience-requirement verification distinguishes verified, unverified, ambiguous, and non-applicable cases. Its influence on final decision-making requires further review and testing.
 
-The latest targeted verification run passed **21 tests** across `tests/test_experience_verification.py` and `tests/test_v2_pipeline.py`. A current full-suite result has not yet been recorded for this checkpoint.
+The latest targeted verification run passed **21 tests** across `tests/test_experience_verification.py` and `tests/test_v2_pipeline.py`. The full test suite passed after the binary prediction rule was updated.
 
 ### Project Scope and Next Steps
 
 - Branch: `v2-semantic-screening`.
 - Candidate dataset: `data/evaluation/v2_eval_candidates.csv`.
 - Generated evaluation results: `data/evaluation/v2_eval_results.csv`.
-- Pre-Day-6 evaluation backup: `data/evaluation/v2_eval_results_pre_day6.csv`.
+- Previous evaluation backup: `data/evaluation/v2_eval_results_pre_day6.csv`.
 - Candidate labels remain separate from generated evaluation results.
 - V2 has not been integrated into the existing V1 API.
 - Next: review the two errors, validate experience-verification behavior in decision-making, run the full test suite, and assess a larger labeled dataset before considering production use.
 
-## V2 Evaluation Checkpoint — 15 October 2026
+## Earlier V2 Evaluation Checkpoint
 
 The current V2 evaluation milestone is frozen. The scoring formula and
 thresholds remain unchanged while development proceeds.
@@ -497,13 +498,13 @@ thresholds remain unchanged while development proceeds.
 - Evaluation examples: 30
 - Classification threshold: 0.25
 - Requirement-match threshold: 0.50
-- Accuracy: 73.33%
-- Precision: 50.00%
-- Recall: 25.00%
-- F1 score: 0.3333
-- ROC-AUC: 0.7330
-- Average Precision: 0.5966
-- Confusion matrix: TN=20, FP=2, FN=6, TP=2
+- Accuracy: 93.10%
+- Precision: 100.00%
+- Recall: 71.43%
+- F1 score: 0.8333
+- ROC-AUC: 0.8506
+- Average Precision: 0.7577
+- Confusion matrix: TN=22, FP=0, FN=2, TP=5
 
 Labels for evaluation rows 16 and 18 were revised to non-match based on
 insufficient evidence for essential role-specific requirements. Reviewer

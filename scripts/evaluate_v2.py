@@ -18,8 +18,8 @@ from model.embeddings import load_embedding_model
 from model.v2_pipeline import (
     analyze_resume_for_job,
     determine_decision_status,
+    decision_status_to_prediction,
 )
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INPUT_PATH = PROJECT_ROOT / "data/evaluation/v2_eval_candidates.csv"
@@ -82,14 +82,11 @@ def main():
         )
 
         score = float(analysis["final_score"])
-        predicted_match = int(
-            score >= CLASSIFICATION_THRESHOLD
-            and analysis["must_haves_satisfied"]
-        )
         decision_status = determine_decision_status(
             analysis,
             classification_threshold=CLASSIFICATION_THRESHOLD,
         )
+        predicted_match = decision_status_to_prediction(decision_status)
 
 
         results.append(
