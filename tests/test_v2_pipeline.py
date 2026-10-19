@@ -1,4 +1,3 @@
-
 from model.v2_pipeline import analyze_resume_for_job, decision_status_to_prediction
 from model.v2_pipeline import determine_decision_status
 
@@ -139,7 +138,121 @@ def test_explicit_required_skill_matches_when_present_in_evidence():
     assert results[0]["matched"] is True
     assert results[0]["score"] == 0.3093
 
+def test_degree_requirement_does_not_match_unrelated_technical_evidence():
+    mocked_result = {
+        "requirement": "Degree in computer science related field",
+        "score": 0.80,
+        "evidence": (
+            "Experienced Java developer with Spring, SQL, "
+            "object-oriented design, and enterprise application development."
+        ),
+    }
 
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Degree in computer science related field"],
+            resume_chunks=[
+                "Experienced Java developer with Spring, SQL, "
+                "object-oriented design, and enterprise application development."
+            ],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+
+def test_degree_requirement_matches_explicit_relevant_degree_evidence():
+    mocked_result = {
+        "requirement": "Degree in computer science related field",
+        "score": 0.40,
+        "evidence": (
+            "Bachelor of Science degree in Computer Science."
+        ),
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Degree in computer science related field"],
+            resume_chunks=[
+                "Bachelor of Science degree in Computer Science."
+            ],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is True
+
+def test_degree_requirement_matches_explicit_relevant_degree_evidence():
+    mocked_result = {
+        "requirement": "Degree in computer science related field",
+        "score": 0.40,
+        "evidence": "Bachelor of Science degree in Computer Science.",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Degree in computer science related field"],
+            resume_chunks=[
+                "Bachelor of Science degree in Computer Science."
+            ],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is True
+
+
+def test_degree_requirement_rejects_unrelated_degree_field():
+    mocked_result = {
+        "requirement": "Degree in computer science related field",
+        "score": 0.90,
+        "evidence": "Bachelor of Arts degree in History.",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Degree in computer science related field"],
+            resume_chunks=[
+                "Bachelor of Arts degree in History."
+            ],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+
+def test_degree_requirement_rejects_unrelated_field_without_degree_in_phrase():
+    mocked_result = {
+        "requirement": "Bachelor or Master of Engineering degree",
+        "score": 0.90,
+        "evidence": "Bachelor of Arts degree in History.",
+    }
+
+    with patch(
+        "model.matching.find_best_resume_chunk",
+        return_value=mocked_result.copy(),
+    ):
+        results = match_requirements_to_resume(
+            model=object(),
+            requirements=["Bachelor or Master of Engineering degree"],
+            resume_chunks=["Bachelor of Arts degree in History."],
+            threshold=0.50,
+        )
+
+    assert results[0]["matched"] is False
+    
 def test_explicit_required_skill_does_not_match_without_evidence():
     mocked_result = {
         "requirement": "Required skill: php",

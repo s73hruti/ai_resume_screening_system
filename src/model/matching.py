@@ -99,6 +99,73 @@ def verify_experience_requirement(
         "reported_years": highest_reported,
     }
 
+
+def verify_education_requirement(
+    requirement: str,
+    evidence: str,
+) -> bool:
+    """Require explicit, relevant degree evidence for education requirements."""
+
+    requirement_text = requirement.lower()
+    evidence_text = evidence.lower()
+
+    education_pattern = (
+        r"\b(?:degree|bachelor|master|doctorate|doctoral|"
+        r"ph\.?d\.?|diploma|undergraduate|postgraduate)\b"
+    )
+
+    if not re.search(education_pattern, requirement_text):
+        return True
+
+    # Evidence must explicitly mention a recognized qualification.
+    degree_pattern = (
+        r"\b(?:bachelor(?:'s)?|master(?:'s)?|associate(?:'s)?|"
+        r"doctorate|doctoral|ph\.?d\.?|b\.?s\.?|b\.?a\.?|"
+        r"m\.?s\.?|m\.?a\.?|b\.?sc\.?|m\.?sc\.?)\b"
+    )
+
+    if not re.search(degree_pattern, evidence_text):
+        return False
+
+    # Extract the required field from wording such as:
+    # "Degree in computer science related field".
+    field_match = re.search(
+        r"\bdegree\s+in\s+(.+)",
+        requirement_text,
+    )
+
+    if field_match:
+        required_field = field_match.group(1)
+    else:
+        # Also support wording such as:
+        # "Bachelor or Master of Engineering degree".
+        field_match = re.search(
+            r"\b(?:bachelor|master|associate)\s+"
+            r"(?:or\s+(?:bachelor|master|associate)\s+)?"
+            r"(?:of|in)\s+(.+?)\s+degree\b",
+            requirement_text,
+        )
+
+        required_field = (
+            field_match.group(1)
+            if field_match
+            else ""
+        )
+
+    if required_field:
+        required_field = re.sub(
+            r"\s+(?:or\s+)?related\s+field\b.*$",
+            "",
+            required_field,
+        ).strip(" .,:;-")
+
+        # Check that the evidence mentions the required field.
+        if required_field and required_field not in evidence_text:
+            return False
+
+    return True
+
+
 def find_best_resume_chunk(
     model,
     requirement: str,
@@ -222,10 +289,29 @@ def match_requirements_to_resume(
                 len(required_skills) == 1
                 and required_skills.issubset(evidence_skills)
             )
+        education_evidence_valid = verify_education_requirement(
+            requirement,
+            result.get("evidence", ""),
+        )
+
+        is_education_requirement = bool(
+            re.search(
+                r"\b(?:degree|bachelor|master|doctorate|doctoral|"
+                r"ph\.?d\.?|diploma|undergraduate|postgraduate)\b",
+                requirement,
+                flags=re.IGNORECASE,
+            )
+        )
 
         result["matched"] = (
-            float(score) >= threshold or exact_required_skill_match
+            education_evidence_valid
+            and (
+                float(score) >= threshold
+                or exact_required_skill_match
+                or is_education_requirement
+            )
         )
+
 
         # Add the complete result to our final results list.
         results.append(result)
