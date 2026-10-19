@@ -514,3 +514,31 @@ retained locally.
 These metrics describe a small development evaluation set and do not
 establish production readiness. No further threshold tuning is part of this
 milestone. V2 remains separate from the V1 application.
+
+### POST `/predict-v2`
+
+Analyzes a resume against a specific job description using the V2 semantic matching pipeline. Unlike V1, which recommends jobs from the existing dataset, V2 evaluates one resume against one supplied job description.
+
+**Example Request**
+
+```json
+{
+  "resume": "Python developer with 3 years of experience building REST APIs, SQL databases, and FastAPI services.",
+  "job_description": "Looking for a Python developer with experience in Python, REST APIs, SQL, and FastAPI."
+}
+```
+
+**Response**
+
+The endpoint returns the V2 analysis, including the final score, decision status, extracted requirements, requirement-level matches, strengths, and potential gaps.
+
+**Validation**
+- `resume` is required and must contain at least 10 characters.
+- `job_description` is required and must contain at least 10 characters.
+- Invalid requests return HTTP `422`.
+
+**Try it locally**
+
+Start the API, then open `http://localhost:8000/docs` and select `POST /predict-v2` to submit a request.
+
+V2 loads its sentence-embedding model on the first V2 request and reuses it for subsequent requests.
