@@ -166,12 +166,7 @@ def extract_must_have_skills(job_description: str) -> set[str]:
 
             explicit_mandatory = any(
                 re.search(p, before)
-                for p in [
-                    r"\bmust[\s-]+have\b",
-                    r"\brequired\b",
-                    r"\bmandatory\b",
-                    r"\bessential\b",
-                ]
+                for p in mandatory_patterns[:4]
             ) or any(
                 re.search(
                     p,
@@ -200,12 +195,7 @@ def extract_must_have_skills(job_description: str) -> set[str]:
                 last_mandatory = max(
                     (
                         match.start()
-                        for pattern in [
-                            r"\bmust[\s-]+have\b",
-                            r"\brequired\b",
-                            r"\bmandatory\b",
-                            r"\bessential\b",
-                        ]
+                        for pattern in mandatory_patterns[:4]
                         for match in re.finditer(pattern, earlier_text)
                     ),
                     default=-1,
@@ -216,13 +206,7 @@ def extract_must_have_skills(job_description: str) -> set[str]:
                     
             core_knowledge = any(
                 re.search(p, local_before)
-                for p in [
-                    r"\bexcellent\s+knowledge\s+of\b",
-                    r"\bstrong\s+knowledge\s+of\b",
-                    r"\bgood\s+knowledge\s+of\b",
-                    r"\bsolid\s+knowledge\s+of\b",
-                    r"\bsound\s+knowledge\s+of\b",
-                ]
+                for p in mandatory_patterns[4:]
             )
 
             # A shared list introduction applies to the technologies
