@@ -9,6 +9,8 @@ from src.model.loader import load_artifacts
 
 # Import the reusable prediction pipeline.
 from src.model.predictor import predict_jobs
+from src.model.embeddings import load_embedding_model
+from src.model.v2_pipeline import analyze_resume_for_job
 
 # Create the FastAPI application instance.
 app = FastAPI(
@@ -65,3 +67,40 @@ def predict(request: ResumeRequest):
     return {
         "recommendations": recommendations
     }
+
+# --- V2 semantic resume screening endpoint ---
+# V2 is loaded only when the first V2 request arrives.
+# The loaded model is then reused for subsequent requests.
+_v2_model = None
+
+
+class ResumeJobRequest(BaseModel):
+    """Request schema for V2 resume-to-job analysis."""
+
+    resume: str = Field(
+        ...,
+        min_length=10,
+        description="Resume text to analyze.",
+    )
+    job_description: str = Field(
+        ...,
+        min_length=10,
+        description="Job description to compare against the resume.",
+    )
+
+@app.post("/predict-v2")
+def predict_v2(request: ResumeJobRequest):
+    """Analyze a resume against one job description using V2."""
+
+    global _v2_model
+
+    if _v2_model is None:
+        _v2_model = load_embedding_model()
+
+    analysis = analyze_resume_for_job(
+        resume=request.resume,
+        job_description=request.job_description,
+        model=_v2_model,
+    )
+
+    return analysis
